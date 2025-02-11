@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config('DataSaude', ':bar_chart:')
+st.set_page_config('DataSaúde', ':bar_chart:')
 
 tratamento = pd.read_csv('trat_mg.csv', encoding='utf-8', dtype={'COD_IBGE': str, 'ANO': str, 'CARROPIPA': str, 'CHAFARIZ': str, 'FONTE': str, 'CISTERNA': str, 'CANALIZACAO': str})
 
@@ -20,7 +20,7 @@ anos_para_filtro = tratamento['ANO'].unique()
 filtro_colunas = []
 
 # Ignorar coluna OUTRO_DESINF pois não trás mais informações de qual outra desinfecção é feita
-# Ignorar OUTRA_ETP pelo mesmo motivo
+# Ignorar OUTRA_ETP e OUTRO_SUPRIMENTO pelo mesmo motivo
 ignorar_coluna = ['OUTRO_DESINF', 'OUTRA_ETP', 'OUTRO_SUPRIMENTO']
 
 for coluna in tratamento.columns:
@@ -30,7 +30,7 @@ for coluna in tratamento.columns:
 filtro_labels = ['Forma de abastecimento', 'Captação Superficial', 'Capetação Subterrânea', 'Captação da água de chuva', 'Etapa de pré oxidação', 'Etapa de mistura rápida / coagulação', 'Etapa de Floculação', 'Etapa de decantação', 'Etapa de flotação', 'Impedimento de monitaramento', 'Etapa de desinfecção', 'Desinfecção com Cloro Gás ou Hipoclorito', 'Desinfecção com isocianuratos', 'Desinfecção com Cloramina', 'Dexinfecção com dióxido de cloro', 'Desinfecção com ozônio', 'Desinfecção com UV', 'RAD Cloro residual livre', 'RAD dióxido de cloro', 'RAD cloro residual combinado', 'Polímero com epicolidrina', 'Polímero com acrilamida', 'Etapa de fluoretação', 'Etapa de desfluoretação', 'Carro pipa', 'Chafariz', 'Fonte', 'Cisterna', 'Canalização']
 
 # Barra lateral
-st.sidebar.markdown("# Análise de dados do setor de saúde de Minas Gerais")
+st.sidebar.markdown('''# :bar_chart: DataSaúde\n\nPortal de **dados** e **estatísticas** sobre a saúde.''')
 
 select_filtro_ano = st.sidebar.selectbox('Selecione um ano:', anos_para_filtro, index=None, placeholder='Selecione um ano')
 select_filtro_coluna = st.sidebar.selectbox('Selecione uma categoria:', filtro_colunas, format_func=lambda x: filtro_labels[filtro_colunas.index(x)], index=None, placeholder='Selecione uma categoria')
