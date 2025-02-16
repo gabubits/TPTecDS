@@ -109,56 +109,35 @@ def trat_agua():
             st.dataframe(df_filtrado[[select_filtro_coluna, 'ANO']].value_counts().reset_index())
 
             # Gerar gráfico de barras para a categoria selecionada
-            if select_filtro_coluna:
-                fig, ax = plt.subplots()
-                df_filtrado[select_filtro_coluna].value_counts().plot(kind='bar', ax=ax)
-                ax.set_title(f"Distribuição de {select_filtro_coluna} para o ano {select_filtro_ano}")
-                ax.set_xlabel(select_filtro_coluna)
-                ax.set_ylabel("Frequência")
-                st.pyplot(fig)
+            fig, ax = plt.subplots()
+            df_filtrado[select_filtro_coluna].value_counts().plot(kind='bar', ax=ax)
+            ax.set_title(f"Distribuição de {select_filtro_coluna} para o ano {select_filtro_ano}")
+            ax.set_xlabel(select_filtro_coluna)
+            ax.set_ylabel("Frequência")
+            st.pyplot(fig)
 
-            # Extrair os códigos IBGE dos dados filtrados
-            codigos_ibge_filtrados = df_filtrado['COD_IBGE'].unique()
+            df_for_map = df_filtrado.set_index("COD_IBGE")
+
+            for feature in geojson_data['features']:
+                feature['properties']['id'] = feature['properties']['id'][:-1]
+                cidade_cod_ibge = feature['properties']['id']
+                feature['properties']['categoria'] = select_filtro_coluna
+                if cidade_cod_ibge in df_for_map.index:
+                    feature['properties']['dado'] = df_for_map.loc[cidade_cod_ibge, select_filtro_coluna]
+                else: feature['properties']['dado'] = 'N'
 
             # --- Criação do mapa ---
             st.header(":world_map: Mapa das Cidades Filtradas")
             m = folium.Map(location=[-18.5122, -44.5550], zoom_start=6)
 
-            # Função que define o estilo das cidades (baseado na filtragem)
-            def style_function(feature):
-                cidade_cod_ibge = feature['properties']['id']
-                if cidade_cod_ibge in codigos_ibge_filtrados:
-                    return {
-                        'fillColor': '#00FF00',  # Verde para cidades filtradas
-                        'color': '#000000',       # Cor da borda
-                        'weight': 1,
-                        'fillOpacity': 0.7
-                    }
-                else:
-                    return {
-                        'fillColor': '#808080',  # Cinza para cidades não filtradas
-                        'color': '#000000',
-                        'weight': 1,
-                        'fillOpacity': 0.3
-                    }
-
-            # Função para obter o valor da categoria para uma cidade (usando o código IBGE)
-            def get_categoria_dado(cidade, categoria):
-                dados_categoria = df_filtrado[df_filtrado['COD_IBGE'] == cidade]
-                if not dados_categoria.empty:
-                    return dados_categoria[categoria].values[0]
-                else:
-                    return 'N/A'
-
-            # Para cada cidade (feature) no GeoJSON, adiciona os campos 'categoria' e 'dado'
-            for feature in geojson_data['features']:
-                cidade_cod_ibge = feature['properties']['id']
-                feature['properties']['categoria'] = select_filtro_coluna
-                feature['properties']['dado'] = get_categoria_dado(cidade_cod_ibge, select_filtro_coluna)
-
             folium.GeoJson(
                 geojson_data,
-                style_function=style_function,
+                style_function= lambda feature: {
+                    "fillColor": "#00FF00" if feature['properties']['dado'] == 'S' else '#808080',
+                    "color": "#000000",
+                    "weight": 1,
+                    "fillOpacity": 0.7,
+                },
                 tooltip=folium.GeoJsonTooltip(
                     fields=['name', 'categoria', 'dado'],
                     aliases=['Cidade: ', 'Categoria: ', 'Dado: '],
@@ -175,3 +154,26 @@ def trat_agua():
     with tabInsights:
         st.markdown(":linked_paperclips: Insights com outras bases")
         st.write("Aqui serão exibidos alguns insights e curiosidades com outras bases disponíveis no sistema.")
+
+
+""" # Função que define o estilo das cidades (baseado na filtragem)
+            def style_function(feature):
+                cidade_cod_ibge = feature['properties']['id']
+                if cidade_cod_ibge in codigos_ibge_filtrados:
+                    return '#00FF00'  # Verde para cidades filtradas
+                return '#808080' # Cinza para cidades não filtradas
+                print(feature)
+
+            # Função para obter o valor da categoria para uma cidade (usando o código IBGE)
+            def get_categoria_dado(cidade, categoria):
+                dados_categoria = df_filtrado[df_filtrado['COD_IBGE'] == cidade]
+                if not dados_categoria.empty:
+                    return dados_categoria[categoria].values[0]
+                else:
+                    return 'N/A'
+
+            # Para cada cidade (feature) no GeoJSON, adiciona os campos 'categoria' e 'dado'
+            for feature in geojson_data['features']:
+                cidade_cod_ibge = feature['properties']['id']
+                feature['properties']['categoria'] = select_filtro_coluna
+                feature['properties']['dado'] = get_categoria_dado(cidade_cod_ibge, select_filtro_coluna) """
