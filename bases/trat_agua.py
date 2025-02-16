@@ -70,7 +70,7 @@ def trat_agua():
     
     with tabEstats:
         st.header(":chart_with_upwards_trend: Informações gerais")
-        st.markdown("Descrição. Fonte: [Ministério da Saúde](https://link.com)")
+        st.markdown("Dados sobre o tratamento de água empregado nos sistemas e soluções alternativas de abastecimento de água para consumo humano, informados pelo prestador de serviço em frequência anual. Fonte: [Ministério da Saúde](https://dados.gov.br/dados/conjuntos-dados/sisagua-tratamento-de-agua)")
         st.markdown(f"- Número total de registros: {len(tratamento)} instâncias.")
         st.markdown(f"- Anos disponíveis para consulta: {', '.join(tratamento['ANO'].unique())}.")
         st.markdown(f"- Quantidade de colunas: {len(tratamento.columns)}")
