@@ -5,25 +5,47 @@ import json
 import matplotlib.pyplot as plt
 import folium
 from streamlit_folium import st_folium
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+import random
+
 
 def trat_agua():
+
     @st.cache_data
     def carregar_dados():
         tratamento = pd.read_csv('trat_mg.csv', encoding='utf-8', dtype={'COD_IBGE': str, 'ANO': str, 'CARROPIPA': str, 'CHAFARIZ': str, 'FONTE': str, 'CISTERNA': str, 'CANALIZACAO': str})
-
-        tratamento['CANALIZACAO'] = tratamento.CANALIZACAO.fillna('N')
-        tratamento['CARROPIPA'] = tratamento.CARROPIPA.fillna('N')
-        tratamento['FONTE'] = tratamento.FONTE.fillna('N')
-        tratamento['CHAFARIZ'] = tratamento.CHAFARIZ.fillna('N')
-        tratamento['CISTERNA'] = tratamento.CISTERNA.fillna('N')
-        tratamento['VAZAO_AGUA'] = tratamento.VAZAO_AGUA.fillna(0.0)
-        tratamento['NUM_FILTROS'] = tratamento.NUM_FILTROS.fillna(0.0)
-        tratamento['OUTRA_ETP'] = tratamento.OUTRA_ETP.fillna('N')
-        tratamento['OUTRO_DESINF'] = tratamento.OUTRO_DESINF.fillna('N')
-        tratamento['OUTRO_SUPRIMENTO'] = tratamento.OUTRO_SUPRIMENTO.fillna('N')
-
         return tratamento
 
+    def aprendizado_maq():
+        dados = pd.read_csv('trat_num.csv', encoding='utf-8', dtype={'COD_IBGE': str, 'ANO': str, 'CANALIZACAO': str})
+        
+        colunas = ['CAPT_SUPERFICIAL', 'CAPT_SUBTERRANEA', 'CAPT_AGUA_CHUVA', 'ETP_PRE_OXIDACAO', 'ETP_MIST_RAP_C0AG', 'ETP_FLOCULACAO', 'ETP_DECANTACAO', 'ETP_FLOTACAO', 'IMP_MONIT', 'DESINF_CLORO_GAS_HIPOC', 'DESINF_ISOCIANURATOS', 'DESINF_CLORAMINA', 'DESINF_DIOXIDO_CLORO', 'DESINF_OZONIO', 'DESINF_UV', 'RAD_CLORO_RES_LIVRE', 'RAD_DIOX_CLORO', 'RAD_CLORO_RES_COMB', 'POLIM_COM_EPICOLIDRINA', 'POLIM_COM_ACRILAMIDA', 'CARROPIPA', 'CHAFARIZ', 'FONTE', 'CISTERNA', 'CLASSIFICACAO_TRATAMENTO']
+        colunas_labels = ['Captação Superficial', 'Captação Subterrânea', 'Captação da água de chuva', 'Etapa de pré oxidação', 'Etapa de mistura rápida / coagulação', 'Etapa de Floculação', 'Etapa de decantação', 'Etapa de flotação', 'Impedimento de monitaramento', 'Desinfecção com Cloro Gás ou Hipoclorito', 'Desinfecção com isocianuratos', 'Desinfecção com Cloramina', 'Desinfecção com dióxido de cloro', 'Desinfecção com ozônio', 'Desinfecção com UV', 'RAD Cloro residual livre', 'RAD dióxido de cloro', 'RAD cloro residual combinado', 'Polímero com epicolidrina', 'Polímero com acrilamida', 'Carro pipa', 'Chafariz', 'Fonte', 'Cisterna']
+
+        dados = dados[colunas]
+        x = dados.drop(columns=["CLASSIFICACAO_TRATAMENTO"])
+        y = dados["CLASSIFICACAO_TRATAMENTO"]
+
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.75)
+        clf = DecisionTreeClassifier()
+        clf.fit(x_train, y_train)
+
+        colunas_valores = {}
+        for i in range(len(colunas[:-1])):
+            colunas_valores[colunas[i]] = int(st.checkbox(colunas_labels[i]))
+
+        to_dataframe = pd.DataFrame.from_dict(colunas_valores, orient='index').T
+        predicao = clf.predict(to_dataframe)
+        if predicao[0]:
+            st.markdown('#### :x: De acordo com nossos critérios, o tratamento de água na sua cidade é **INADEQUADO**.')
+            st.write('Entre em contato com o gestor da cidade para requisitar melhorias!!')
+        else:
+            st.markdown('#### :white_check_mark: De acordo com nossos critérios, o tratamento de água na sua cidade é **ADEQUADO**.')
+            st.write('Fique de olho e sempre fiscalize a água da sua cidade para que se mantenha limpa e própria para uso!!')
+    
     # Função para carregar o GeoJSON
     @st.cache_data
     def carregar_geojson():
@@ -59,7 +81,7 @@ def trat_agua():
 
     # Ignorar coluna OUTRO_DESINF pois não trás mais informações de qual outra desinfecção é feita
     # Ignorar OUTRA_ETP e OUTRO_SUPRIMENTO pelo mesmo motivo
-    ignorar_coluna = ['OUTRO_DESINF', 'OUTRA_ETP', 'OUTRO_SUPRIMENTO']
+    ignorar_coluna = ['OUTRO_DESINF', 'OUTRA_ETP', 'OUTRO_SUPRIMENTO', 'CLASSIFICACAO_TRATAMENTO']
 
     for coluna in tratamento.columns:
         if coluna in ignorar_coluna: continue
@@ -151,29 +173,18 @@ def trat_agua():
             # Exibe o mapa no Streamlit
             st_folium(m)
 
+        st.divider()
+        st.header(":grey_question: O tratamento de água é adequado na sua cidade?")
+        st.markdown("- **Critérios**:")
+        st.markdown("-- Água de fontes alternativas sem tratamento (Carro-pipa, chafariz, fonte ou cisterna): **Inadequada**.")
+        st.markdown("-- Água sem informações de captação: **Inadequada**.")
+        st.markdown("-- O tratamento só será considerada **Adequado** quando tem monitoramento, etapas de desinfecção e etapas de tratamento.")
+        st.markdown("-- Etapas de tratamento básico: Etapas de pré-oxidação, floculação, decantação, flotação e mistura rápida / coagulação.")
+        st.markdown("-- Etapas de desinfecção: Desinfecção com Cloro Gás ou Hipoclorito, Desinfecção com isocianuratos, Desinfecção com Cloramina, Desinfecção com dióxido de cloro, Desinfecção com ozônio e Desinfecção com UV.")
+        
+        st.markdown("- Selecione as etapas presentes na sua cidade: ")
+        aprendizado_maq()
+        
     with tabInsights:
-        st.markdown(":linked_paperclips: Insights com outras bases")
+        st.header(":linked_paperclips: Insights com outras bases")
         st.write("Aqui serão exibidos alguns insights e curiosidades com outras bases disponíveis no sistema.")
-
-
-""" # Função que define o estilo das cidades (baseado na filtragem)
-            def style_function(feature):
-                cidade_cod_ibge = feature['properties']['id']
-                if cidade_cod_ibge in codigos_ibge_filtrados:
-                    return '#00FF00'  # Verde para cidades filtradas
-                return '#808080' # Cinza para cidades não filtradas
-                print(feature)
-
-            # Função para obter o valor da categoria para uma cidade (usando o código IBGE)
-            def get_categoria_dado(cidade, categoria):
-                dados_categoria = df_filtrado[df_filtrado['COD_IBGE'] == cidade]
-                if not dados_categoria.empty:
-                    return dados_categoria[categoria].values[0]
-                else:
-                    return 'N/A'
-
-            # Para cada cidade (feature) no GeoJSON, adiciona os campos 'categoria' e 'dado'
-            for feature in geojson_data['features']:
-                cidade_cod_ibge = feature['properties']['id']
-                feature['properties']['categoria'] = select_filtro_coluna
-                feature['properties']['dado'] = get_categoria_dado(cidade_cod_ibge, select_filtro_coluna) """
